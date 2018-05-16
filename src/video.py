@@ -1,10 +1,12 @@
 # Import everything needed to edit/save/watch video clips
+import os
 from moviepy.editor import VideoFileClip
-from image_processing_pipeline import *
+from lane_processing_pipeline import *
 import numpy as np
+from train_car_model import *
 
 class image_processor_class():
-    def __init__(self, clip, outputFile):
+    def __init__(self, clip, outputFile, params):
         videoClip = clip
         
         # variables used for smoothing
@@ -19,75 +21,50 @@ class image_processor_class():
         self.left_fit_av = np.zeros((1, 3))
         self.right_ma_arr = np.zeros((self.av_window_limit, 3))
         self.right_fit_av = np.zeros((1, 3))
+        self.params = params
         
         # process video clip
         white_clip = videoClip.fl_image(self.process_image) 
         white_clip.write_videofile(outputFile, audio=False)        
     
-    def process_image(self, image):
-        # calculate perspective transform
-        M, M_inv = calcPerspectiveTransform()
-    
-        # read camera calibration
-        mtx, dist = load_cam_calibration()
-        
-        # Find left and right line lanes
-        imgUndistort, left_fit, right_fit, _, _, calc_check, combined_binary, unwarped_marked = \
-            laneMarker(image, M, M_inv, mtx, dist, 0, np.array([0, 0, 0]), np.array([0, 0, 0]))
-        
-        self.moving_average(calc_check, left_fit, right_fit)
-        
-        composite_img = annotate_output_figure(imgUndistort, self.left_ma, self.right_ma, combined_binary, unwarped_marked, M_inv)
-        
-        self.left_fit_prev = left_fit
-        self.right_fit_prev = right_fit
+    def process_image(self, img):
 
-        self.timeStepCounter = self.timeStepCounter + 1 
-        
-        return composite_img
-    
-    def moving_average(self, calc_check, left_fit, right_fit):
-        
-        # before window_limit is reached
-        if self.timeStepCounter < self.av_window_limit:
-            if calc_check:
-                self.valid_estimate[self.av_window-1] = 1
-                self.left_ma_arr[self.av_window-1, :] = left_fit
-                self.right_ma_arr[self.av_window-1, :] = right_fit
-            else:
-                self.valid_estimate[self.av_window-1] = 1
-                self.left_ma_arr[self.av_window-1, :] = self.left_ma
-                self.right_ma_arr[self.av_window-1, :] = self.right_ma
-            self.av_window += 1
+        if os.path.isfile('../car_classifier.p'):
+            print('Loading trained model ../car_classifier.p')
+            print('To train a new model please delete this file')
+            load_quant = pickle.load(open('../car_classifier.p', 'rb'))
+            svc = load_quant['clf']
+            X_scaler = load_quant['X_scaler']
         else:
-            self.left_ma_arr[0:(self.av_window_limit-1), :] = self.left_ma_arr[1:(self.av_window_limit), :]
-            self.right_ma_arr[0:(self.av_window_limit-1), :] = self.right_ma_arr[1:(self.av_window_limit), :]
-            self.valid_estimate[0:self.av_window_limit-1] = self.valid_estimate[1:self.av_window_limit]
-            if calc_check:
-                self.valid_estimate[self.av_window_limit-1] = 1
-                self.left_ma_arr[self.av_window_limit-1, :] = left_fit
-                self.right_ma_arr[self.av_window_limit-1, :] = right_fit
-            else:
-                self.valid_estimate[self.av_window_limit-1] = 1
-                self.left_ma_arr[self.av_window_limit-1, :] = self.left_ma
-                self.right_ma_arr[self.av_window_limit-1, :] = self.right_ma           
-
-            
-        indx = np.where(self.valid_estimate == 1)[0]
+            svc, X_scaler = train_load_svc(self.params)
         
-        weight = np.exp(range(0, -len(indx), -1) )
-        sum_weight = np.sum(weight)
-        weight = weight / sum_weight
-        w_arr = np.vstack((weight, weight, weight))
+        marked_image, heat_img = find_car_in_frame(img, svc, X_scaler, self.params)
         
-        self.weight_arr[indx,:] = w_arr.T
-        self.left_ma = np.sum(np.multiply(self.left_ma_arr, self.weight_arr), 0) 
-        self.right_ma = np.sum(np.multiply(self.right_ma_arr, self.weight_arr), 0)  
+#         plt.subplot(121)
+#         plt.imshow(marked_image)
+#         plt.subplot(122)
+#         plt.imshow(heat_img, cmap='hot')
+#         plt.show()
+        return marked_image
+    
         
 if __name__ == '__main__':
     
     #fileList = glob.glob("../*.mp4")
     fileList = [r'project_video.mp4']
+    
+    params = {}
+    params['color_space'] = 'HLS' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+    params['orient'] = 11  # HOG orientations
+    params['pix_per_cell'] = 8 # HOG pixels per cell
+    params['cell_per_block'] = 2 # HOG cells per block
+    params['hog_channel'] = 'ALL' # Can be 0, 1, 2, or "ALL"
+    params['spatial_size'] = (16, 16) # Spatial binning dimensions
+    params['hist_bins'] = 8    # Number of histogram bins
+    params['spatial_feat'] = True # Spatial features on or off
+    params['hist_feat'] = True # Histogram features on or off
+    params['hog_feat'] = True # HOG features on or off
+    params['y_start_stop'] = [400, 670] # Min and max in y to search in slide_window()
     
     # iterate over all files
     for figIdx, fileName in enumerate(fileList):
@@ -96,8 +73,8 @@ if __name__ == '__main__':
         outputFile = '../output_videos/' + fileName
         print(inputFile)
         
-#         clip1 = VideoFileClip(inputFile).subclip(0, 5)
-        clip1 = VideoFileClip(inputFile)
+        clip1 = VideoFileClip(inputFile).subclip(16, 16.6)
+#         clip1 = VideoFileClip(inputFile)
         
         # process video clip
-        oImageProc = image_processor_class(clip1, outputFile)
+        oImageProc = image_processor_class(clip1, outputFile, params)
