@@ -240,12 +240,12 @@ def find_car_in_frame(image, svc, X_scaler, params):
     draw_image = draw_image.astype(np.float32)/255
     
     #y_start_stop = [[400, 550], [300, 650], [300, 650], [300, 650]]
-    y_start_stop = [[400, 500], [300, 650], [300, 650], [300, 650]]
+    y_start_stop = [[400, 500], [300, 600], [300, 650]]
     windows = slide_window(draw_image, x_start_stop=[None, None], y_start_stop=y_start_stop,
-                        scale=[1.0, 1.5, 2.5, 3.5],  
+                        scale=[1.0, 1.55, 2.5],  
                         xy_window=(64, 64), xy_overlap=(0.5, 0.5))
     print('{} windows to search for cars...'.format(len(windows) ))
-#     window_img = draw_boxes(draw_image, windows, color=(255, 0, 0), thick=2) 
+    window_img = draw_boxes(draw_image, windows, color=(255, 0, 0), thick=2) 
     
     # y_start_stop = [[520, 570]]
     # windows = slide_window(image, x_start_stop=[None, None], y_start_stop=y_start_stop,
@@ -286,8 +286,9 @@ def find_car_in_frame(image, svc, X_scaler, params):
 #     window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=3)
     
     heat_img, labels = add_heat(np.zeros(image.shape[0:2]), hot_windows, threshold=3)
+
 #     marked_image = draw_labeled_bboxes(image, labels)
-    marked_image = draw_labeled_bboxes(image, labels)
+    marked_image, bbox = draw_labeled_bboxes(image, labels)
     
 #     plt.figure(figsize=(12, 2))
 #     plt.subplot(1,3,1)
@@ -298,7 +299,7 @@ def find_car_in_frame(image, svc, X_scaler, params):
 #     plt.imshow(marked_image)
 #     plt.show()
     
-    return marked_image, heat_img
+    return marked_image, heat_img, bbox
 
 if __name__ == '__main__':
 
@@ -327,7 +328,7 @@ if __name__ == '__main__':
      
     img = mpimg.imread('../test_images/bbox-example-image.jpg')
     
-    marked_image, heat_img = find_car_in_frame(img, svc, X_scaler, params)
+    marked_image, heat_img, bbox = find_car_in_frame(img, svc, X_scaler, params)
     
     plt.figure()
     plt.imshow(marked_image)

@@ -4,6 +4,7 @@ from moviepy.editor import VideoFileClip
 from lane_processing_pipeline import *
 import numpy as np
 from train_car_model import *
+from extract_feature_functions import *
 
 class image_processor_class():
     def __init__(self, clip, outputFile, params):
@@ -14,13 +15,8 @@ class image_processor_class():
         self.left_fit_prev = np.array([0, 0, 0])
         self.right_fit_prev = np.array([0, 0, 0])
         self.av_window = 1
-        self.av_window_limit = 5
-        self.valid_estimate = np.zeros((self.av_window_limit, 1))
-        self.weight_arr = np.zeros((self.av_window_limit, 3))
-        self.left_ma_arr = np.zeros((self.av_window_limit, 3))
-        self.left_fit_av = np.zeros((1, 3))
-        self.right_ma_arr = np.zeros((self.av_window_limit, 3))
-        self.right_fit_av = np.zeros((1, 3))
+        self.av_window_limit = 25
+        self.bbox = []
         self.params = params
         
         # process video clip
@@ -28,7 +24,8 @@ class image_processor_class():
         white_clip.write_videofile(outputFile, audio=False)        
     
     def process_image(self, img):
-
+        
+        draw_img = img.copy()
         if os.path.isfile('../car_classifier.p'):
             print('Loading trained model ../car_classifier.p')
             print('To train a new model please delete this file')
@@ -38,16 +35,37 @@ class image_processor_class():
         else:
             svc, X_scaler = train_load_svc(self.params)
         
-        marked_image, heat_img = find_car_in_frame(img, svc, X_scaler, self.params)
+        marked_image, heat_img, bbox = find_car_in_frame(img, svc, X_scaler, self.params)
+        time_heatMap, lbl = self.moving_average(bbox, marked_image.shape[0:2])
+        if not time_heatMap==None:
+            filtered_image, sig_bbox = draw_labeled_bboxes(draw_img, lbl)
+#             plt.subplot(121)
+#             plt.imshow(filtered_image)
+#             plt.subplot(122)
+#             plt.imshow(time_heatMap, cmap='hot')
+#             plt.show()      
+            return filtered_image
+        else:
+            return draw_img
         
-#         plt.subplot(121)
-#         plt.imshow(marked_image)
-#         plt.subplot(122)
-#         plt.imshow(heat_img, cmap='hot')
-#         plt.show()
-        return marked_image
-    
+
+        #return marked_image
         
+    def moving_average(self, bbox, imgSize):
+        # before window_limit is reached
+        if self.timeStepCounter > self.av_window_limit:
+            heatImg = np.zeros(imgSize)
+            self.bbox.pop(0)
+            self.bbox += bbox
+            heatImg, lbl = add_heat(heatImg, self.bbox, threshold=self.av_window_limit-1)
+        else:
+            self.bbox += bbox
+            heatImg = None
+            lbl = None
+        
+        self.timeStepCounter += 1
+        return heatImg, lbl
+            
 if __name__ == '__main__':
     
     #fileList = glob.glob("../*.mp4")
@@ -73,7 +91,7 @@ if __name__ == '__main__':
         outputFile = '../output_videos/' + fileName
         print(inputFile)
         
-        clip1 = VideoFileClip(inputFile).subclip(16, 16.6)
+        clip1 = VideoFileClip(inputFile).subclip(40, 45)
 #         clip1 = VideoFileClip(inputFile)
         
         # process video clip

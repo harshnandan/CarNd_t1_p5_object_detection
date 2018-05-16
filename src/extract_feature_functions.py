@@ -169,6 +169,7 @@ def add_heat(heatmap, bboxes, threshold=0):
 
 def draw_labeled_bboxes(img, labels):
     # Iterate through all detected cars
+    bbox = []
     for car_number in range(1, labels[1]+1):
         # Find pixels with each car_number label value
         nonzero = (labels[0] == car_number).nonzero()
@@ -176,8 +177,12 @@ def draw_labeled_bboxes(img, labels):
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
         # Define a bounding box based on min/max x and y
-        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        bbox_local = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        bbox.append(bbox_local)
         # Draw the box on the image
-        img = cv2.rectangle(img, bbox[0], bbox[1], (255, 255, 0), 3)
+        img = cv2.rectangle(img, bbox_local[0], bbox_local[1], (255, 255, 0), 3)
+
+        img = cv2.putText(img, 'Car {}'.format(car_number), tuple(bbox_local[0]), cv2.FONT_ITALIC, 1.5, (255,255,255), 5 )
+        
     # Return the image
-    return img
+    return img, bbox
