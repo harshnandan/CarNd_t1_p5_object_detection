@@ -55,7 +55,8 @@ class image_processor_class():
         # before window_limit is reached
         if self.timeStepCounter > self.av_window_limit:
             heatImg = np.zeros(imgSize)
-            self.bbox.pop(0)
+            if len(self.bbox):
+                self.bbox.pop(0)
             self.bbox += bbox
             heatImg, lbl = add_heat(heatImg, self.bbox, threshold=self.av_window_limit-1)
         else:
@@ -91,7 +92,7 @@ if __name__ == '__main__':
         outputFile = '../output_videos/' + fileName
         print(inputFile)
         
-        clip1 = VideoFileClip(inputFile).subclip(40, 45)
+        clip1 = VideoFileClip(inputFile).subclip(0, 50)
 #         clip1 = VideoFileClip(inputFile)
         
         # process video clip
