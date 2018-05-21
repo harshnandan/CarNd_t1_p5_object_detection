@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 from skimage.feature import hog
 from scipy.ndimage.measurements import label
-# Define a function to return HOG features and visualization
+
+#Function to return HOG features and visualization
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
                         vis=False, feature_vec=True):
     # Call with two outputs if vis==True
@@ -27,14 +28,14 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block,
                        visualise=vis, feature_vector=feature_vec)
         return features
 
-# Define a function to compute binned color features  
+# Function to compute binned color features  
 def bin_spatial(img, size=(32, 32)):
     # Use cv2.resize().ravel() to create the feature vector
     features = cv2.resize(img, size).ravel() 
     # Return the feature vector
     return features
 
-# Define a function to compute color histogram features 
+# Function to compute color histogram features 
 # NEED TO CHANGE bins_range if reading .png files with mpimg!
 def color_hist(img, nbins=32, bins_range=(0, 256)):
     # Compute the histogram of the color channels separately
@@ -46,8 +47,7 @@ def color_hist(img, nbins=32, bins_range=(0, 256)):
     # Return the individual histograms, bin_centers and feature vector
     return hist_features
 
-# Define a function to extract features from a list of images
-# Have this function call bin_spatial() and color_hist()
+# Function to extract features from a list of images
 def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
                         hist_bins=32, orient=9, 
                         pix_per_cell=8, cell_per_block=2, hog_channel=0,
@@ -98,7 +98,7 @@ def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
     # Return list of feature vectors
     return features
     
-# Define a function that takes an image,
+# Function that takes an image,
 # start and stop positions in both x and y, 
 # window size (x and y dimensions),  
 # and overlap fraction (for both x and y)
@@ -117,10 +117,6 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], scal
    
     # Initialize a list to append window positions to
     window_list = []
-    # Loop through finding x and y window positions
-    # Note: you could vectorize this step, but in practice
-    # you'll be considering windows one by one with your
-    # classifier, so looping makes sense
     for idx, scale_factor in enumerate(scale):
         yspan = y_start_stop[idx][1] - y_start_stop[idx][0]
         xspan = x_start_stop[idx][1] - x_start_stop[idx][0]
@@ -140,13 +136,12 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], scal
                 endx = startx + np.int(xy_window[0]*scale_factor )
                 starty = np.int( ys*ny_pix_per_step + y_start_stop[idx][0] )
                 endy = starty + np.int( xy_window[1]*scale_factor )
-                
                 # Append window position to list
                 window_list.append(((startx, starty), (endx, endy)))
     # Return the list of windows
     return window_list
 
-# Define a function to draw bounding boxes
+# Function to draw bounding boxes
 def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     # Make a copy of the image
     imcopy = np.copy(img)
@@ -186,8 +181,6 @@ def draw_labeled_bboxes(img, labels):
             bbox.append(bbox_local)
             # Draw the box on the image
             img = cv2.rectangle(img, bbox_local[0], bbox_local[1], (255, 255, 0), 3)
-    
-            #img = cv2.putText(img, 'Car {}'.format(car_number), tuple(bbox_local[0]), cv2.FONT_ITALIC, 1.5, (255,255,255), 5 )
-        
+
     # Return the image
     return img, bbox
