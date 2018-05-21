@@ -8,14 +8,19 @@ import pickle
 import glob
 import time
 from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
+from multiprocessing import cpu_count
+from functools import partial
+from multiprocessing import Pool
+
 #from skimage.feature import hog
 from extract_feature_functions import *
 from lane_processing_pipeline import *
 # NOTE: the next import is only valid for scikit-learn version <= 0.17
 # for scikit-learn >= 0.18 use:
 # from sklearn.model_selection import train_test_split
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 # Define a function to extract features from a single image window
 # This function is very similar to extract_features()
@@ -68,7 +73,7 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
 
 # Define a function you will pass an image 
 # and the list of windows to be searched (output of slide_windows())
-def search_windows(img, windows, clf, scaler, color_space='RGB', 
+def search_windows(windows, img, clf, scaler, color_space='RGB', 
                     spatial_size=(32, 32), hist_bins=32, 
                     hist_range=(0, 256), orient=9, 
                     pix_per_cell=8, cell_per_block=2, 
@@ -77,24 +82,64 @@ def search_windows(img, windows, clf, scaler, color_space='RGB',
 
     #1) Create an empty list to receive positive detection windows
     on_windows = []
+    test_img = []
+    
+#     # multiprocessor code
+#     for window in windows:
+#         #3) Extract the test window from original image
+#         test_img.append( cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0] ], (64, 64)) )      
+#     
+#     t1 = time.time()        
+#     pool = Pool(4)
+#     features_ex = partial(single_img_features, color_space=color_space, 
+#                             spatial_size=spatial_size, hist_bins=hist_bins, 
+#                             orient=orient, pix_per_cell=pix_per_cell, 
+#                             cell_per_block=cell_per_block, 
+#                             hog_channel=hog_channel, spatial_feat=spatial_feat, 
+#                             hist_feat=hist_feat, hog_feat=hog_feat)
+#     result = pool.map_async(features_ex, test_img)
+# #     while not result.ready():
+# #         print("num left: {}".format(result._number_left))
+# #         time.sleep(0.1)
+#     features = result.get()    
+#     
+#     pool.join
+#     t2 = time.time()
+#     print('Total Feature extraction time multi {:.5f}'.format(t2-t1))
+    
     #2) Iterate over all windows in the list
-    for window in windows:
+    t_feature = 0
+    t_prediction = 0
+    features_count = 0
+    for idx, window in enumerate(windows):
         #3) Extract the test window from original image
-        test_img = cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0]], (64, 64))      
+        test_img = cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0]], (32, 32))      
         #4) Extract features for that window using single_img_features()
+        t1 = time.time()
         features = single_img_features(test_img, color_space=color_space, 
                             spatial_size=spatial_size, hist_bins=hist_bins, 
                             orient=orient, pix_per_cell=pix_per_cell, 
                             cell_per_block=cell_per_block, 
                             hog_channel=hog_channel, spatial_feat=spatial_feat, 
                             hist_feat=hist_feat, hog_feat=hog_feat)
+        t2 = time.time()
+        t_feature += t2-t1
+        
         #5) Scale extracted features to be fed to classifier
+        #test_features = scaler.transform(np.array(features[idx]).reshape(1, -1))
         test_features = scaler.transform(np.array(features).reshape(1, -1))
         #6) Predict using your classifier
+        t1 = time.time()
         prediction = clf.predict(test_features)
+        t2 = time.time()
+        t_prediction += t2-t1
+        
         #7) If positive (prediction == 1) then save the window
         if prediction == 1:
             on_windows.append(window)
+    
+#     print('Total Feature extraction time {:.5f}'.format(t_feature))
+    print('Total Prediction time {:.5f}'.format(t_prediction))
     #8) Return windows for positive detections
     return on_windows
     
@@ -143,7 +188,7 @@ def train_load_svc(params):
 #     #plot hog feature
 #     sample_img = mpimg.imread(cars[52])
 #     sample_img_cspace = cv2.cvtColor(sample_img, cv2.COLOR_RGB2HLS)
-#     
+#      
 #     _, vis_img_ch0 = get_hog_features(sample_img_cspace[:,:,0], 
 #                                             orient, pix_per_cell, cell_per_block, 
 #                                             vis=True, feature_vec=True)
@@ -197,7 +242,7 @@ def train_load_svc(params):
         'pixels per cell and', cell_per_block,'cells per block')
     print('Feature vector length:', len(X_train[0]))
     # Use a linear SVC 
-    svc = LinearSVC(C=10)
+    svc = LinearSVC(C=0.05)
     # Check the training time for the SVC
     t=time.time()
     svc.fit(X_train, y_train)
@@ -216,7 +261,7 @@ def train_load_svc(params):
     
     return svc, X_scaler
 
-def find_car_in_frame(image, svc, X_scaler, params):
+def find_car_in_frame(image, svc, X_scaler, params, windows=None):
 
     ### Set parameters
     color_space = params['color_space']
@@ -233,61 +278,45 @@ def find_car_in_frame(image, svc, X_scaler, params):
 
     
     draw_image = np.copy(image)
-    
+#     draw_image = cv2.blur(draw_image,(5, 5))
+
     # Uncomment the following line if you extracted training
     # data from .png images (scaled 0 to 1 by mpimg) and the
     # image you are searching is a .jpg (scaled 0 to 255)
     draw_image = draw_image.astype(np.float32)/255
     
-    #y_start_stop = [[400, 550], [300, 650], [300, 650], [300, 650]]
-    y_start_stop = [[400, 500], [300, 600], [300, 650]]
-    windows = slide_window(draw_image, x_start_stop=[None, None], y_start_stop=y_start_stop,
-                        scale=[1.0, 1.55, 2.5],  
-                        xy_window=(64, 64), xy_overlap=(0.5, 0.5))
-    print('{} windows to search for cars...'.format(len(windows) ))
-    window_img = draw_boxes(draw_image, windows, color=(255, 0, 0), thick=2) 
-    
-    # y_start_stop = [[520, 570]]
-    # windows = slide_window(image, x_start_stop=[None, None], y_start_stop=y_start_stop,
-    #                     scale=[0.75],  
-    #                     xy_window=(64, 64), xy_overlap=(0.5, 0.5))
-    # window_img = draw_boxes(draw_image, windows, color=(0, 0, 255), thick=2)  
-    # #
-    # y_start_stop = [[520, 620]]
-    # windows = slide_window(image, x_start_stop=[None, None], y_start_stop=y_start_stop,
-    #                     scale=[1.5],  
-    #                     xy_window=(64, 64), xy_overlap=(0.5, 0.5))
-    # window_img = draw_boxes(window_img, windows, color=(255, 0, 255), thick=2)  
-    # #
-    # y_start_stop = [[520, 700]]
-    # windows = slide_window(image, x_start_stop=[None, None], y_start_stop=y_start_stop,
-    #                     scale=[2.0],  
-    #                     xy_window=(64, 64), xy_overlap=(0.5, 0.5))
-    # window_img = draw_boxes(window_img, windows, color=(0, 255, 255), thick=2)  
-    # #
-    # y_start_stop = [[520, 712]]
-    # windows = slide_window(image, x_start_stop=[None, None], y_start_stop=y_start_stop,
-    #                     scale=[3.0],  
-    #                     xy_window=(64, 64), xy_overlap=(0.5, 0.5))
-    # window_img = draw_boxes(window_img, windows, color=(255, 0, 0), thick=2) 
-    # plt.figure()
-    # plt.imshow(window_img)
-    # plt.show()
-    
+#     x_start_stop = [[350, 850], [200, 1100], [0, 1280], [0, 1280]]
+#     y_start_stop = [[375, 575], [300, 600], [300, 650], [300, 650]]
+#     x_start_stop = [[0, 1280], [0, 1280], [0, 1280]]
+#     y_start_stop = [[375, 650], [300, 650], [400, 650]]
+    if not windows:
+#         x_start_stop = [[0, 1280], [0, 1280], [0, 1280], [0, 1280]]
+#         y_start_stop = [[300, 650], [300, 600], [300, 650], [300, 650]]
+        x_start_stop = [[0, 1280], [0, 1280], [0, 1280], [0, 1280], 
+                        [0, 1280], [0, 1280], [0, 1280]]
+        y_start_stop = [[400, 464], [416, 528], [432, 528], [400, 528], 
+                        [432, 560], [400, 596], [464, 690]]
+        windows = slide_window(image, x_start_stop=x_start_stop, y_start_stop=y_start_stop,
+                            scale=[1.0, 1.0, 1.5, 2.0, 2.0, 3.5, 3.0],  
+                            xy_window=(64, 64), xy_overlap=(0.5, 0.5))
+    window_img = draw_boxes(draw_image, windows, color=(0, 0, 1), thick=2)
     t1=time.time()
-    hot_windows = search_windows(draw_image, windows, svc, X_scaler, color_space=color_space, 
+    
+    hot_windows = search_windows(windows, draw_image, svc, X_scaler, color_space=color_space, 
                             spatial_size=spatial_size, hist_bins=hist_bins, 
                             orient=orient, pix_per_cell=pix_per_cell, 
                             cell_per_block=cell_per_block, 
                             hog_channel=hog_channel, spatial_feat=spatial_feat, 
                             hist_feat=hist_feat, hog_feat=hog_feat)                       
     t2=time.time() 
+    print('{} windows to search for cars...'.format(len(windows) ))
     print('{:2f} seconds to find cars.'.format(t2-t1))
 #     window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=3)
     
-    heat_img, labels = add_heat(np.zeros(image.shape[0:2]), hot_windows, threshold=3)
+    heat_img, labels = add_heat(np.zeros(image.shape[0:2]), hot_windows, threshold=1)
 
-#     marked_image = draw_labeled_bboxes(image, labels)
+    
+#     marked_image, bbox = draw_labeled_bboxes(window_img, labels)
     marked_image, bbox = draw_labeled_bboxes(image, labels)
     
 #     plt.figure(figsize=(12, 2))
@@ -301,21 +330,26 @@ def find_car_in_frame(image, svc, X_scaler, params):
     
     return marked_image, heat_img, bbox
 
-if __name__ == '__main__':
-
-        ### TODO: Tweak these parameters and see how the results change.
+def get_params():
     params = {}
+    
     params['color_space'] = 'HLS' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
     params['orient'] = 11  # HOG orientations
-    params['pix_per_cell'] = 8 # HOG pixels per cell
+    params['pix_per_cell'] = 16 # HOG pixels per cell
     params['cell_per_block'] = 2 # HOG cells per block
-    params['hog_channel'] = 'ALL' # Can be 0, 1, 2, or "ALL"
+    params['hog_channel'] = 'ALL'    # Can be 0, 1, 2, or "ALL"
     params['spatial_size'] = (16, 16) # Spatial binning dimensions
     params['hist_bins'] = 8    # Number of histogram bins
     params['spatial_feat'] = True # Spatial features on or off
     params['hist_feat'] = True # Histogram features on or off
     params['hog_feat'] = True # HOG features on or off
     params['y_start_stop'] = [400, 670] # Min and max in y to search in slide_window()
+    
+    return params
+
+if __name__ == '__main__':
+
+    params = get_params()
     
     if os.path.isfile('../car_classifier.p'):
         print('Loading trained model ../car_classifier.p')
@@ -326,7 +360,7 @@ if __name__ == '__main__':
     else:
         svc, X_scaler = train_load_svc(params)
      
-    img = mpimg.imread('../test_images/bbox-example-image.jpg')
+    img = mpimg.imread('../test_images/bbox_example_10_5.jpg')
     
     marked_image, heat_img, bbox = find_car_in_frame(img, svc, X_scaler, params)
     

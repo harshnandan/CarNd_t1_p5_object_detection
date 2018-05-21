@@ -7,11 +7,12 @@ from scipy.ndimage.measurements import label
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
                         vis=False, feature_vec=True):
     # Call with two outputs if vis==True
+    img = cv2.resize(img, (64, 64))
     if vis == True:
 
         features, hog_image = hog(img, orientations=orient, 
                                   pixels_per_cell=(pix_per_cell, pix_per_cell),
-                                  block_norm= 'L2-Hys',
+                                  block_norm= 'L2',
                                   cells_per_block=(cell_per_block, cell_per_block), 
                                   transform_sqrt=True, 
                                   visualise=True, feature_vector=feature_vec)
@@ -20,7 +21,7 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block,
     else:      
         features = hog(img, orientations=orient, 
                        pixels_per_cell=(pix_per_cell, pix_per_cell),
-                       block_norm= 'L2-Hys',
+                       block_norm= 'L2',
                        cells_per_block=(cell_per_block, cell_per_block), 
                        transform_sqrt=True, 
                        visualise=vis, feature_vector=feature_vec)
@@ -104,16 +105,16 @@ def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
 def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], scale=[1], 
                     xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
     # If x and/or y start/stop positions not defined, set to image size
-    if x_start_stop[0] == None:
-        x_start_stop[0] = 0
-    if x_start_stop[1] == None:
-        x_start_stop[1] = img.shape[1]
+    if x_start_stop[0][0] == None:
+        x_start_stop[0][0] = 0
+    if x_start_stop[0][1] == None:
+        x_start_stop[0][1] = img.shape[1]
     if y_start_stop[0][0] == None:
         y_start_stop[0][0] = 0
     if y_start_stop[0][1] == None:
         y_start_stop[0][1] = img.shape[0]
     # Compute the span of the region to be searched    
-    xspan = x_start_stop[1] - x_start_stop[0]
+   
     # Initialize a list to append window positions to
     window_list = []
     # Loop through finding x and y window positions
@@ -122,6 +123,7 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], scal
     # classifier, so looping makes sense
     for idx, scale_factor in enumerate(scale):
         yspan = y_start_stop[idx][1] - y_start_stop[idx][0]
+        xspan = x_start_stop[idx][1] - x_start_stop[idx][0]
         # Compute the number of pixels per step in x/y
         nx_pix_per_step = np.int(xy_window[0]*scale_factor*(1-xy_overlap[0]))
         ny_pix_per_step = np.int(xy_window[1]*scale_factor*(1-xy_overlap[1]))
@@ -134,7 +136,7 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], scal
         for ys in range(ny_windows):
             for xs in range(nx_windows):
                 # Calculate window position
-                startx = np.int(xs*nx_pix_per_step + x_start_stop[0] )
+                startx = np.int(xs*nx_pix_per_step + x_start_stop[idx][0] )
                 endx = startx + np.int(xy_window[0]*scale_factor )
                 starty = np.int( ys*ny_pix_per_step + y_start_stop[idx][0] )
                 endy = starty + np.int( xy_window[1]*scale_factor )
@@ -178,11 +180,14 @@ def draw_labeled_bboxes(img, labels):
         nonzerox = np.array(nonzero[1])
         # Define a bounding box based on min/max x and y
         bbox_local = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
-        bbox.append(bbox_local)
-        # Draw the box on the image
-        img = cv2.rectangle(img, bbox_local[0], bbox_local[1], (255, 255, 0), 3)
-
-        img = cv2.putText(img, 'Car {}'.format(car_number), tuple(bbox_local[0]), cv2.FONT_ITALIC, 1.5, (255,255,255), 5 )
+        bbox_area = np.abs(bbox_local[0][0] - bbox_local[1][0])*np.abs(bbox_local[0][1] - bbox_local[1][1])
+ 
+        if bbox_area > 1000:
+            bbox.append(bbox_local)
+            # Draw the box on the image
+            img = cv2.rectangle(img, bbox_local[0], bbox_local[1], (255, 255, 0), 3)
+    
+            img = cv2.putText(img, 'Car {}'.format(car_number), tuple(bbox_local[0]), cv2.FONT_ITALIC, 1.5, (255,255,255), 5 )
         
     # Return the image
     return img, bbox
