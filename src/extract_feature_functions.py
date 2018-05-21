@@ -187,7 +187,7 @@ def draw_labeled_bboxes(img, labels):
             # Draw the box on the image
             img = cv2.rectangle(img, bbox_local[0], bbox_local[1], (255, 255, 0), 3)
     
-            img = cv2.putText(img, 'Car {}'.format(car_number), tuple(bbox_local[0]), cv2.FONT_ITALIC, 1.5, (255,255,255), 5 )
+            #img = cv2.putText(img, 'Car {}'.format(car_number), tuple(bbox_local[0]), cv2.FONT_ITALIC, 1.5, (255,255,255), 5 )
         
     # Return the image
     return img, bbox
