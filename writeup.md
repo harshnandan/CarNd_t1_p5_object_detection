@@ -1,150 +1,108 @@
-## Writeup
-
-Some pieces of the code has been borrowed from Udacity labs.
+## Writeup Template
+### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
 
 ---
 
-**Advanced Lane Finding Project**
+**Vehicle Detection Project**
 
 The goals / steps of this project are the following:
 
-* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-* Apply a distortion correction to raw images.
-* Use color transforms, gradients, etc., to create a thresholded binary image.
-* Apply a perspective transform to rectify binary image ("birds-eye view").
-* Detect lane pixels and fit to find the lane boundary.
-* Determine the curvature of the lane and vehicle position with respect to center.
-* Warp the detected lane boundaries back onto the original image.
-* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+* Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
+* Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
+* Note: for those first two steps don't forget to normalize your features and randomize a selection for training and testing.
+* Implement a sliding-window technique and use your trained classifier to search for vehicles in images.
+* Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
+* Estimate a bounding box for vehicles detected.
 
 [//]: # (Image References)
+[image1]: ./examples/car_not_car.png
+[image2]: ./examples/HOG_example.jpg
+[image3]: ./examples/sliding_windows.jpg
+[image4]: ./examples/sliding_window.jpg
+[image5]: ./examples/bboxes_and_heat.png
+[image6]: ./examples/labels_map.png
+[image7]: ./examples/output_bboxes.png
+[video1]: ./project_video.mp4
 
-[image1]: ./img/undistort_chessboard.png "Undistorted"
-[image2]: ./img/undistorted_image.png "Road Undistorted"
-[image3]: ./img/various_thresholding.png "Binary Example"
-[image4]: ./img/threshold_image.png "Binary combined"
-[image5]: ./img/warped_image.png "Warped Image with Visual Fit"
-[image6]: ./img/warped_binary.png "Warped Binary Image"
-[image7]: ./img/lane_pixel_histogram.png "Histogram"
-[image8]: ./img/window_search.png "Window Search"
-[image9]: ./img/2nd_order_equation.png "Second order polynomial"
-[image10]: ./img/2nd_order_equation_curvature.png "curvature"
-[image11]: ./img/lane_marked_perspective_view.png "output of pipeline"
-
-[image12]: ./output_videos/project_video.gif "Marked Video"
-
-## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
-
+## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
 ### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
+### Writeup / README
 
-### Camera Calibration
+#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
 
-It is essential to correct for any distortions introduced by camera. A standalone script 'camera_calibration.py’ computes the cameta matrix 'mtx’ and the distortion coefficient 'dist’ and 'pickle’ these entities into 'cam_calibration.p’. The script works through number of calibration images supplied with the problem. The script identifies the corners within the chess board image and computes the camera matrix and distortion coefficient to map them to real world undistorted coordinates provided by the user. The result of applying camera distortion can be clearly seen in the image below.
+You're reading it!
 
-The camera calibration function provided within openCV requires specification of 'objpoints’, which are the (x, y, z) coordinates of the chessboard corners in the world. As the chessboard is 2D the 'z’ coordinate can be assumed to be '0’. 'objpoints’ is appended to a list every time all the corners are detected on the image. 'imgpoints’ will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
+### Histogram of Oriented Gradients (HOG)
 
-'ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)'
+#### 1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
+The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
 
-'unDistortedImg= cv2.undistort(cornerMarkedImg, mtx, dist, None, mtx)’
+I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 
 ![alt text][image1]
 
-### Pipeline (single images)
+I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
 
-#### 1. Distortion Corrected Image
+Here is an example using the `YCrCb` color space and HOG parameters of `orientations=8`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
 
-The pickled camera calibration file ('cam_calibration.p') saved in the previous step is reloaded into this pipeline and is used to apply correction to images taken on the road. The distortion correction is demonstrated in the image below:
 
 ![alt text][image2]
 
-#### 2. Thresholding to Generate Binary Image
+#### 2. Explain how you settled on your final choice of HOG parameters.
 
-A combination of thresholding of gradient in x direction and s-channel thresholding of image in HLS space is used to generate a binary image. The code to generate the binary image is in 'combined_threshold’ function within 'image_processing_pipeline.py’. This function call more basic functions which are listed between line ’26 to 86’ in the same file.
+I tried various combinations of parameters and...
+
+#### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
+
+I trained a linear SVM using...
+
+### Sliding Window Search
+
+#### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
+
+I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
 
 ![alt text][image3]
 
-To combine these two thresholding methods a logical 'OR’ operator is used and the result of combined thresholding is shown below.
+#### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
+
+Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
 
 ![alt text][image4]
+---
 
-#### 3. Calculating the Perspective Transform
+### Video Implementation
 
-The perspective transform is an operation which translates the perspective image into a bird’s eye view. The transform is calculated by identifying 4 points in the perspective image ('src’) and telling the OpenCV function 'getPerspectiveTransform’ about the corresponding location of these 4 points in the warped image ('dst’). For this assignment 2 points on the left lane line and 2 points on the right lane line are chosen in the undistorted image with straight lane line and because the lane lines are straight it is easy to tell the corresponding location in bird’s eye view. 
+#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
+Here's a [link to my video result](./project_video.mp4)
 
-'M = cv2.getPerspectiveTransform(src, dst)'
 
-An inverse transform can also be calculated which will transform points in warped image to points in perspective image by switching 'src’ and 'dst’.
+#### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-'M = cv2.getPerspectiveTransform(dst, src)'
+I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
 
-The code for calculating this transform is in 'calcPerspectiveTransform’ (line 105 to 127) function in 'image_processing_pipeline’.
+Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
 
-```python
-src = np.array([[1100, img_height], [685  , 450], [595, 450], [200, img_height]], dtype=np.float32)
-
-dst = np.array([[1000, img_height], [1000, 0], [240, 0], [240, img_height]], dtype=np.float32)
-```
-This resulted in the following source and destination points:
-
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 1100, 720      | 1000, 720        | 
-| 685, 450      | 1000, 0      |
-| 595, 450     | 240, 0      |
-| 200, 720      | 240, 720        |
-
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
-
+### Here are six frames and their corresponding heatmaps:
 
 ![alt text][image5]
 
-#### 4. Lane Identification
-
-Binary form of warped image (shown below) is used to initiate the lane finding algorithm. As the binary image is a 2D matrix containing only ones and zeros, summing the value of pixel in vertical direction indicates where the lanes are. The starting position of the lane is taken to be the midpoint of the left and right bumps in the figure below.
-
+### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
 ![alt text][image6]
+
+### Here the resulting bounding boxes are drawn onto the last frame in the series:
 ![alt text][image7]
 
-A sliding window approach is utilized to find the lane position in rest of the image. Figure below shows how the sliding window identifies the lane line in rest of image. (line number 134 to 208)
 
-![alt text][image8]
-
-#### 5. Radius of Curvature
-
-A second order polynomial is fitted through the identified point and radius of curvature is calculated as follows (equations are borrowed from Udacity course material)
-
-![alt text][image9]
-
-![alt text][image10]
-
-#### 6. Lane Demarcation in Perspective View
-
-The lane line detected in warped image can be mapped back to the perspective view using the inverse transform matrix. The binary and the warped image is shown as a subfigure in the marked figure to get a sense of what is the major steps performed by the pipeline. This helps a lot to debug and understand particular behavior of the pipeline.
-
-
-![alt text][image11]
-
----
-
-### Pipeline (video)
-
-The only difference for the video processing timeline and image processing timeline is that in the video processing timeline the detection of line lane in binary image from second frame onward is limited to the region next to the lane detected in previous frame. This not only makes finding the lanes faster, but it also throws out the outliers which do appear as the car is moving along the road. This also results in smoother lane detection through time.
-
-Here's a [link to higher quality video](https://youtu.be/IUyTZYoWxmw)
-
-![alt text][image12]
 
 ---
 
 ### Discussion
 
-#### Limitations of current pipeline:
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-##### The pipeline will fail if the lane line does not start from the bottom edge of the figure.
-
-##### Also, if a lane line disappears from the frame the lane updating algorithm will fail when the lane line reappears.  
+Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 

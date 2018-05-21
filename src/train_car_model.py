@@ -287,9 +287,9 @@ def find_car_in_frame(image, svc, X_scaler, params, windows=None):
     
     return marked_image, heat_img, bbox
 
+# Function to define image feature parameters
 def get_params():
     params = {}
-    
     params['color_space'] = 'HLS' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
     params['orient'] = 11  # HOG orientations
     params['pix_per_cell'] = 16 # HOG pixels per cell
@@ -315,12 +315,13 @@ if __name__ == '__main__':
         X_scaler = load_quant['X_scaler']
     else:
         svc, X_scaler = train_svc(params)
-     
-    img = mpimg.imread('../test_images/bbox_example_10_5.jpg')
     
-    marked_image, heat_img, bbox = find_car_in_frame(img, svc, X_scaler, params)
+    images_path = glob.glob('../test_images/test*.jpg')
+    for img_path in images_path:
+        img = mpimg.imread(img_path)
+        marked_image, heat_img, bbox = find_car_in_frame(img, svc, X_scaler, params)
     
-    plt.figure()
-    plt.imshow(marked_image)
-    plt.show()
+        plt.figure()
+        plt.imshow(marked_image)
+        plt.show()
     
