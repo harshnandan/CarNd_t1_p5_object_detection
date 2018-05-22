@@ -93,6 +93,8 @@ A significance presence test was used to filter out false positive. In this stra
 
 ### Here the resulting bounding boxes are drawn onto the last frame in the series:
 
+On the left you see the windows which were classified as one with the cars by the classifier. It is evident in the left figure that there is a false positive identification near the tree. But when significance presence check is applied on the this and last 20 frames the false identification is automatically dropped.
+
 ![alt text][image5]
 
 
