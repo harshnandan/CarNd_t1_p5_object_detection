@@ -18,11 +18,9 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 [image1]: ./img/training_data_set.png
 [image2]: ./img/hog_feature.png
-[image3]: ./img/sliding_windows.jpg
-[image4]: ./img/sliding_window.jpg
-[image5]: ./img/heat_map_bbox.png
-[image6]: ./img/labels_map.png
-[image7]: ./img/output_bboxes.png
+[image3]: ./img/sliding_window.png
+[image4]: ./img/heat_map_bbox.png.png
+[image5]: ./img/output_bboxes.png
 [video1]: ./img/project_video.gif
 
 
@@ -76,7 +74,7 @@ Since the amount of computing is directly proportional to the number of search w
 
 #### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
 
-Ultimately, I searched on five scales using HSV 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a accurate results.  Here is an example image:
+Ultimately, I searched on five scales using HSV 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided an accurate results.  To filter out false positives results found using various sliding windows were overlaped to create a heatmap and then it was thresholded to drop the noise. Here is an example image:
 
 ![alt text][image4]
 ---
@@ -93,16 +91,9 @@ Here's a [link to my video result](./project_video.mp4)
 
 A significance presence test was used to filter out false positive. In this strategy a running log of last 20 images were maintained and then they were overlapped using ‘add_heat’ function to come up with overlap of all 20 frames of data. Then this image was thresholded such that the overlapping images should appear in at least 18 frames. 
 
-### Here are six frames and their corresponding heatmaps:
-
-![alt text][image5]
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
 ### Here the resulting bounding boxes are drawn onto the last frame in the series:
 
-![alt text][image7]
+![alt text][image5]
 
 
 
