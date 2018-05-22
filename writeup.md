@@ -61,9 +61,8 @@ I first attempted to use an SVC classifier with rbf kernel using around 1600 (80
 
 Since the amount of computing is directly proportional to the number of search windows a tight control was maintained over windows of various scale. The smallest windows were of size (64x64) and other window sizes were defined by scaling the window with a factor.
 
--------------------------------------------------------------------------
 | x_start | x_end | y_start | y_end | scale | overlap |
--------------------------------------------------------------------------
+|:-------:|:-----:|:-------:|:-----:|:-------:|:-----:|
 |  0  | 1280 | 400 | 464 | 1.0 | 0.5 |
 |  0  | 1280 | 416 | 528 | 1.0 | 0.5 |
 |  0  | 1280 | 432 | 528 | 1.5 | 0.5 |
@@ -71,7 +70,7 @@ Since the amount of computing is directly proportional to the number of search w
 |  0  | 1280 | 432 | 560 | 2.0 | 0.5 |
 |  0  | 1280 | 400 | 596 | 3.5 | 0.5 |
 |  0  | 1280 | 464 | 690 | 3.0 | 0.5 |
--------------------------------------------------------------------------
+
 
 ![alt text][image3]
 
