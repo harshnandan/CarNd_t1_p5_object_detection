@@ -82,7 +82,9 @@ Ultimately, I searched on five scales using HSV 3-channel HOG features plus spat
 ### Video Implementation
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](https://youtu.be/PbUlLF5n0uo)
+
+A low quality gif of the output from the video pipeline is shown here.
 
 ![alt text][video1]
 
@@ -103,5 +105,5 @@ A significance presence test was used to filter out false positive. In this stra
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The video stream here has cars which are visible in good lighting condition. If the lighting condition is not good (example night time or too much glare due to sun or due to snow) or the images are distorted due to rain drops on the wind-shield the pipeline may just fall apart due to problem in extracting feature vectors. These cases will need qaugmentation fro different kinds of sensors like LIDAR. Also the processing is not real-time. With current pipeline 2-3 frames are processed every second. For actual implementation we need 25 frames/sec processing.
 
