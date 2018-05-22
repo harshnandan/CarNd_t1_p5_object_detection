@@ -19,9 +19,9 @@ The goals / steps of this project are the following:
 [image1]: ./img/training_data_set.png
 [image2]: ./img/hog_feature.png
 [image3]: ./img/sliding_window.png
-[image4]: ./img/heat_map_bbox.png.png
-[image5]: ./img/output_bboxes.png
-[video1]: ./img/project_video.gif
+[image4]: ./img/heat_map_bbox.png
+[image5]: ./img/video_frame_with_significance_test.png
+[video1]: ./output_videos/project_video.gif
 
 
 
