@@ -7,6 +7,7 @@ import cv2
 import pickle
 import glob
 import time
+import random
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
@@ -108,7 +109,23 @@ def search_windows(windows, img, clf, scaler, color_space='RGB',
     print('Total Prediction time {:.5f}'.format(t_prediction))
     # Return windows for positive detections
     return on_windows
-    
+
+# Function to visualize HOG feature
+def visualize_hog_feature(sample_img, orient, pix_per_cell, cell_per_block):
+    #plot hog feature
+    sample_img_cspace = cv2.cvtColor(sample_img, cv2.COLOR_RGB2HSV)
+      
+    _, vis_img_ch0 = get_hog_features(sample_img_cspace[:,:,0], 
+                                            orient, pix_per_cell, cell_per_block, 
+                                            vis=True, feature_vec=True)
+    _, vis_img_ch1 = get_hog_features(sample_img_cspace[:,:,1], 
+                                            orient, pix_per_cell, cell_per_block, 
+                                            vis=True, feature_vec=True)
+    _, vis_img_ch2 = get_hog_features(sample_img_cspace[:,:,2], 
+                                            orient, pix_per_cell, cell_per_block, 
+                                            vis=True, feature_vec=True)
+    return vis_img_ch0, vis_img_ch1, vis_img_ch2
+
 # Function to read all training images
 def get_image_path(path, nImgs=None):
     image_path = []
@@ -151,30 +168,42 @@ def train_svc(params):
     hist_feat = params['hist_feat']
     hog_feat = params['hog_feat']
     
-#     #plot hog feature
-#     sample_img = mpimg.imread(cars[52])
-#     sample_img_cspace = cv2.cvtColor(sample_img, cv2.COLOR_RGB2HLS)
-#      
-#     _, vis_img_ch0 = get_hog_features(sample_img_cspace[:,:,0], 
-#                                             orient, pix_per_cell, cell_per_block, 
-#                                             vis=True, feature_vec=True)
-#     _, vis_img_ch1 = get_hog_features(sample_img_cspace[:,:,1], 
-#                                             orient, pix_per_cell, cell_per_block, 
-#                                             vis=True, feature_vec=True)
-#     _, vis_img_ch2 = get_hog_features(sample_img_cspace[:,:,2], 
-#                                             orient, pix_per_cell, cell_per_block, 
-#                                             vis=True, feature_vec=True)
-#     plt.subplot(231)
-#     plt.imshow(sample_img)
-#     plt.subplot(232)
-#     plt.imshow(sample_img_cspace)
-#     plt.subplot(234)
-#     plt.imshow(vis_img_ch0)
-#     plt.subplot(235)
-#     plt.imshow(vis_img_ch1)
-#     plt.subplot(236)
-#     plt.imshow(vis_img_ch2)
-#     plt.show
+#     sample_images = []
+#     for nSample in range(10):
+#         ind = random.randint(0, nTrain_img)
+#         sample_images.append( mpimg.imread(cars[nSample]) )
+#     for nSample in range(10):
+#         ind = random.randint(0, nTrain_img)
+#         sample_images.append( mpimg.imread(notcars[nSample]) )
+#     plt.figure(figsize=(8,8))
+#     for nSample in range(20):
+#         plt.subplot(5,4,nSample+1)
+#         plt.imshow(sample_images[nSample])
+#     plt.show()
+#     
+#     plt.figure(figsize=(8,6))
+#     img_idx = [273]
+#     sample_img = []
+#     sample_img.append(mpimg.imread(cars[img_idx[0]]))
+#     sample_img.append(mpimg.imread(notcars[img_idx[0]]))
+#     plt.subplot(2,4,1)
+#     plt.imshow(sample_img[0])
+#     plt.xlabel('Car')
+#     plt.subplot(2,4,5)
+#     plt.imshow(sample_img[1])
+#     plt.xlabel('Non Car')
+#     for ind in range(2):
+#         v1, v2, v3 = visualize_hog_feature(sample_img[ind], orient, pix_per_cell, cell_per_block)
+#         plt.subplot(2,4,2+(ind)*4)
+#         plt.imshow(v1, cmap='gray')
+#         plt.xlabel('HOG - Channel 1')
+#         plt.subplot(2,4,3+(ind)*4)
+#         plt.imshow(v2, cmap='gray')
+#         plt.xlabel('HOG - Channel 2')
+#         plt.subplot(2,4,4+(ind)*4)
+#         plt.imshow(v3, cmap='gray')
+#         plt.xlabel('HOG - Channel 3')
+#     plt.show()
     
     # Extract features from car images
     car_features = extract_features(cars, color_space=color_space, 
@@ -257,6 +286,8 @@ def find_car_in_frame(image, svc, X_scaler, params, windows=None):
                             xy_window=(64, 64), xy_overlap=(0.5, 0.5))
     # for debug only
     window_img = draw_boxes(draw_image, windows, color=(0, 0, 1), thick=2)
+#     plt.imshow(window_img)
+#     plt.show()
     
     # Use classifier to identify windows which have car
     t1=time.time()
@@ -270,10 +301,13 @@ def find_car_in_frame(image, svc, X_scaler, params, windows=None):
     print('{} windows to search for cars...'.format(len(windows) ))
     print('{:2f} seconds to find cars.'.format(t2-t1))
     
-#   window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=3)
+    window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 1), thick=3)
+#     plt.imshow(window_img)
+#     plt.show()
+
     heat_img, labels = add_heat(np.zeros(image.shape[0:2]), hot_windows, threshold=1)
     
-#    marked_image, bbox = draw_labeled_bboxes(window_img, labels)
+#     marked_image, bbox = draw_labeled_bboxes(window_img, labels)
     marked_image, bbox = draw_labeled_bboxes(image, labels)
     
 #     plt.figure(figsize=(12, 2))
@@ -317,7 +351,7 @@ if __name__ == '__main__':
         svc, X_scaler = train_svc(params)
     
     images_path = glob.glob('../test_images/test*.jpg')
-    for img_path in images_path:
+    for img_path in images_path[:1]:
         img = mpimg.imread(img_path)
         marked_image, heat_img, bbox = find_car_in_frame(img, svc, X_scaler, params)
     

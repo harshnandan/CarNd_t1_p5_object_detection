@@ -28,8 +28,7 @@ class image_processor_class():
         draw_img = np.copy(img)
         # find bounding boxes for the car
         marked_image, heat_img, bboxes = find_car_in_frame(draw_img, self.svc, self.X_scaler, self.params)
-#         plt.imshow(marked_image)
-#         plt.show()
+
 
         bboxes_final = bboxes
         # checking for windows that appear in majority of n consicutive frames
@@ -37,11 +36,12 @@ class image_processor_class():
                                                 marked_image.shape[0:2])
         if not time_heatMap==None:
             filtered_image, _ = draw_labeled_bboxes(img, lbl)
-#             plt.subplot(121)
-#             plt.imshow(filtered_image)
-#             plt.subplot(122)
-#             plt.imshow(time_heatMap, cmap='hot')
-#             plt.show()
+            plt.figure(figsize=(12,6))
+            plt.subplot(121)
+            plt.imshow(marked_image)
+            plt.subplot(122)
+            plt.imshow(filtered_image)
+            plt.show()
             return filtered_image
         else:
             return img
@@ -54,7 +54,7 @@ class image_processor_class():
             if len(self.bbox):
                 self.bbox.pop(0)
             self.bbox += bbox
-            heatImg, lbl = add_heat(heatImg, self.bbox, threshold=np.int(self.av_window_limit*0.9))
+            heatImg, lbl = add_heat(heatImg, self.bbox, threshold=np.int(self.av_window_limit*0.2))
         else:
             self.bbox += bbox
             heatImg = None
@@ -85,6 +85,6 @@ if __name__ == '__main__':
         outputFile = '../output_videos/' + fileName
         print(inputFile)
         # load clips
-        clip1 = VideoFileClip(inputFile).subclip(0, 50)
+        clip1 = VideoFileClip(inputFile).subclip(38, 50)
         # process video clip
         oImageProc = image_processor_class(clip1, outputFile, params, svc, X_scaler)
