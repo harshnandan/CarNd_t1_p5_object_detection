@@ -16,14 +16,14 @@ The goals / steps of this project are the following:
 
 
 [//]: # (Image References)
-[image1]: ./examples/training_data_set.png
-[image2]: ./examples/hog_feature.png
-[image3]: ./examples/sliding_windows.jpg
-[image4]: ./examples/sliding_window.jpg
-[image5]: ./examples/heat_map_bbox.png
-[image6]: ./examples/labels_map.png
-[image7]: ./examples/output_bboxes.png
-[video1]: ./ project_video.gif
+[image1]: ./img/training_data_set.png
+[image2]: ./img/hog_feature.png
+[image3]: ./img/sliding_windows.jpg
+[image4]: ./img/sliding_window.jpg
+[image5]: ./img/heat_map_bbox.png
+[image6]: ./img/labels_map.png
+[image7]: ./img/output_bboxes.png
+[video1]: ./img/project_video.gif
 
 
 
@@ -60,6 +60,7 @@ I first attempted to use an SVC classifier with rbf kernel using around 1600 (80
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
 Since the amount of computing is directly proportional to the number of search windows a tight control was maintained over windows of various scale. The smallest windows were of size (64x64) and other window sizes were defined by scaling the window with a factor.
+
 -------------------------------------------------------------------------
 | x_start | x_end | y_start | y_end | scale | overlap |
 -------------------------------------------------------------------------
